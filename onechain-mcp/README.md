@@ -322,8 +322,7 @@ onechain-mcp/
 │   ├── index.ts           # Main server (stdio transport)
 │   └── index-railway.ts   # Railway server (SSE transport)
 ├── dist/                  # Compiled JavaScript
-├── Dockerfile             # Local Docker build
-├── Dockerfile.railway     # Railway deployment
+├── Dockerfile             # Docker/Railway build
 ├── docker-compose.yml     # Docker Compose config
 ├── railway.json           # Railway configuration
 ├── package.json

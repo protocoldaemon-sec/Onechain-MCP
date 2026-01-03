@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo-onechain.png" alt="OneChain Logo" width="120">
+  <img src="onechain-mcp/assets/logo-onechain.png" alt="OneChain Logo" width="120">
 </p>
 
 <h1 align="center">OneChain MCP Server</h1>

@@ -417,16 +417,52 @@ async function handleToolCall(name: string, args: Record<string, unknown> | unde
       validateAddress(address);
       const client = getClient(args?.network as string);
       const filter = (args?.filter as string) || "both";
-      let queryFilter: { FromAddress: string } | { ToAddress: string } | { FromOrToAddress: { addr: string } };
-      if (filter === "from") queryFilter = { FromAddress: address };
-      else if (filter === "to") queryFilter = { ToAddress: address };
-      else queryFilter = { FromOrToAddress: { addr: address } };
+      const limit = (args?.limit as number) || 50;
+      const cursor = args?.cursor as string | undefined;
+      const order = (args?.order as "ascending" | "descending") || "descending";
+
+      if (filter === "both") {
+        // Query both directions separately since FromOrToAddress is not supported
+        const [fromTxs, toTxs] = await Promise.all([
+          client.queryTransactionBlocks({
+            filter: { FromAddress: address },
+            options: { showInput: true, showEffects: true, showEvents: true, showBalanceChanges: true },
+            limit: Math.ceil(limit / 2),
+            order,
+          }),
+          client.queryTransactionBlocks({
+            filter: { ToAddress: address },
+            options: { showInput: true, showEffects: true, showEvents: true, showBalanceChanges: true },
+            limit: Math.ceil(limit / 2),
+            order,
+          }),
+        ]);
+        
+        // Merge and deduplicate by digest
+        const seen = new Set<string>();
+        const merged = [...fromTxs.data, ...toTxs.data].filter(tx => {
+          if (seen.has(tx.digest)) return false;
+          seen.add(tx.digest);
+          return true;
+        });
+        
+        // Sort by timestampMs
+        merged.sort((a, b) => {
+          const timeA = Number(a.timestampMs || 0);
+          const timeB = Number(b.timestampMs || 0);
+          return order === "descending" ? timeB - timeA : timeA - timeB;
+        });
+        
+        return { content: [{ type: "text", text: JSON.stringify({ data: merged.slice(0, limit), hasNextPage: fromTxs.hasNextPage || toTxs.hasNextPage }, null, 2) }] };
+      }
+      
+      const queryFilter = filter === "from" ? { FromAddress: address } : { ToAddress: address };
       const txs = await client.queryTransactionBlocks({
         filter: queryFilter,
         options: { showInput: true, showEffects: true, showEvents: true, showBalanceChanges: true },
-        limit: (args?.limit as number) || 50,
-        cursor: args?.cursor as string | undefined,
-        order: (args?.order as "ascending" | "descending") || "descending",
+        limit,
+        cursor,
+        order,
       });
       return { content: [{ type: "text", text: JSON.stringify(txs, null, 2) }] };
     }

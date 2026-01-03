@@ -1,6 +1,7 @@
 {
   "mcpServers": {
     "onechain": {
+      "type": "sse",
       "url": "https://onechain-mcp-production.up.railway.app/sse"
     }
   }

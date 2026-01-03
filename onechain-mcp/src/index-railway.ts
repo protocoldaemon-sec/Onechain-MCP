@@ -499,7 +499,6 @@ function createServer() {
 // Express app with SSE transport
 const app = express();
 app.use(cors());
-app.use(express.json());
 
 // Store transports by session
 const transports: Map<string, SSEServerTransport> = new Map();
@@ -522,12 +521,18 @@ app.get("/", (_req: Request, res: Response) => {
 
 // SSE endpoint
 app.get("/sse", async (req: Request, res: Response) => {
-  console.log("New SSE connection");
+  console.log("New SSE connection request");
+  
+  // Set SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
   
   const transport = new SSEServerTransport("/message", res);
   const server = createServer();
   
   transports.set(transport.sessionId, transport);
+  console.log(`SSE session created: ${transport.sessionId}`);
   
   res.on("close", () => {
     console.log(`SSE connection closed: ${transport.sessionId}`);
@@ -537,17 +542,25 @@ app.get("/sse", async (req: Request, res: Response) => {
   await server.connect(transport);
 });
 
-// Message endpoint
+// Message endpoint - don't use express.json() middleware, let transport handle raw body
 app.post("/message", async (req: Request, res: Response) => {
   const sessionId = req.query.sessionId as string;
+  console.log(`Message received for session: ${sessionId}`);
+  
   const transport = transports.get(sessionId);
   
   if (!transport) {
+    console.log(`Session not found: ${sessionId}, active sessions: ${Array.from(transports.keys()).join(", ")}`);
     res.status(400).json({ error: "Invalid or missing session" });
     return;
   }
 
-  await transport.handlePostMessage(req, res);
+  try {
+    await transport.handlePostMessage(req, res);
+  } catch (error) {
+    console.error("Error handling message:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Start server

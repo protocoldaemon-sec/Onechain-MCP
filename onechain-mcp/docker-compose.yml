@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  onechain-mcp:
+    build: .
+    image: onechain-mcp:latest
+    container_name: onechain-mcp
+    environment:
+      - ONECHAIN_NETWORK=${ONECHAIN_NETWORK:-testnet}
+    stdin_open: true
+    tty: true
+    restart: unless-stopped

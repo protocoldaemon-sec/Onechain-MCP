@@ -1,0 +1,588 @@
+# OneChain
+
+> OneChain is a next-generation blockchain platform redefining financial services through blockchain technology, building infrastructure that serves everyone.
+
+OneChain is written in Rust and supports smart contracts written in the Move programming language. It features near-instantaneous transaction confirmation, a developer-centric ecosystem, and comprehensive security through MPC and decentralized governance.
+
+## Documentation
+
+- [OneChain Documentation](https://docs.onelabs.cc/): Main documentation portal
+- [TypeScript SDK Docs](https://doc-testnet.onelabs.cc/): SDK quick start and API reference
+- [Website](https://onelabs.cc/): Official OneChain website
+- [Blog](https://onechain.medium.com/): Technical articles and updates
+
+## Key Features
+
+- Near Instantaneous Transaction Confirmation
+- Developer-Centric Ecosystem
+- Seamless and User-Friendly Blockchain Access
+- Yield-Generating Stablecoin
+- Digitization and Tokenization of Real-World Assets
+- Collaborative Node Ecosystem
+- Top-Tier Security: MPC + Decentralized Governance
+- Extensible and Scalable Ecosystem for Real-World Applications
+- Modular Configurable Privacy Controls
+
+## Native Token
+
+OneChain has a native token called OCT with a fixed supply. OCT is used to:
+- Pay for gas fees
+- Delegated stake on authorities within an epoch
+- Determine voting power of authorities
+
+## Network Locations
+
+| Network | Full Node | Faucet |
+|---------|-----------|--------|
+| Local | http://127.0.0.1:9000 | http://127.0.0.1:9123/gas |
+| Testnet | https://rpc-testnet.onelabs.cc:443 | https://faucet-testnet.onelabs.cc:443 |
+| Mainnet | https://rpc.mainnet.onelabs.cc:443 | N/A |
+
+## TypeScript SDK
+
+The [OneChain TypeScript SDK](https://github.com/one-chain-labs/ts-sdks) is a modular library for interacting with the OneChain blockchain. Install via npm:
+
+```
+npm install @onelabs/sui
+```
+
+### SDK Packages
+
+- `@onelabs/sui` - Core SDK for transactions and queries
+- `@onelabs/sui/utils` - Utilities for formatting and parsing OneChain types
+- `@onelabs/sui/bcs` - Binary Canonical Serialization
+- `@onelabs/sui/graphql-transport` - GraphQL transport layer
+- `@onelabs/dapp-kit` - React hooks and components for dApps
+- `@onelabs/sui/wallet-standard` - Wallet integration standard
+- `@onelabs/kiosk` - Kiosk framework for NFT marketplaces
+- `@onelabs/sui/deepbook` - DeepBook DEX integration
+- `@onelabs/zksend` - Zero-knowledge send functionality
+
+### SuiClient - Network Interactions
+
+The `SuiClient` class connects to a network's JSON-RPC server for all RPC operations:
+
+```typescript
+import { getFullnodeUrl, SuiClient } from '@onelabs/sui/client';
+
+const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+
+// Get owned objects
+const objects = await client.getOwnedObjects({ owner: '0x123...' });
+
+// Execute transaction
+const result = await client.signAndExecuteTransaction({
+  transaction: tx,
+  signer: keypair,
+});
+
+// Wait for transaction indexing
+await client.waitForTransaction({ digest: result.digest });
+```
+
+Network URLs via `getFullnodeUrl()`: `localnet`, `devnet`, `testnet`, `mainnet`
+
+### Transaction Building
+
+```typescript
+import { Transaction } from '@onelabs/sui/transactions';
+
+const tx = new Transaction();
+
+// Split coins
+const [coin] = tx.splitCoins(tx.gas, [1000]);
+
+// Transfer objects
+tx.transferObjects([coin], '0xrecipient...');
+
+// Move call
+tx.moveCall({
+  target: '0xpkg::module::function',
+  arguments: [tx.object('0xobject'), tx.pure.u64(100)],
+});
+
+// Execute
+const result = await client.signAndExecuteTransaction({
+  transaction: tx,
+  signer: keypair,
+  options: {
+    showEffects: true,
+    showObjectChanges: true,
+    showBalanceChanges: true,
+  },
+});
+```
+
+Transaction inputs:
+- `tx.pure.address(addr)` - Address input
+- `tx.pure.u64(num)` / `tx.pure.u128(num)` - Numeric inputs
+- `tx.pure.string(str)` - String input
+- `tx.object(id)` - Object reference
+- `tx.gas` - Gas coin reference
+
+### Cryptography & Keypairs
+
+Supported signing schemes:
+
+| Scheme | Class | Import |
+|--------|-------|--------|
+| Ed25519 | `Ed25519Keypair` | `@onelabs/sui/keypairs/ed25519` |
+| ECDSA Secp256k1 | `Secp256k1Keypair` | `@onelabs/sui/keypairs/secp256k1` |
+| ECDSA Secp256r1 | `Secp256r1Keypair` | `@onelabs/sui/keypairs/secp256r1` |
+
+```typescript
+import { Ed25519Keypair } from '@onelabs/sui/keypairs/ed25519';
+
+// Generate random keypair
+const keypair = new Ed25519Keypair();
+
+// From existing secret key
+const keypair = Ed25519Keypair.fromSecretKey(secretKeyBytes);
+
+// From mnemonic
+const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
+
+// Get address
+const address = keypair.getPublicKey().toSuiAddress();
+
+// Sign and verify
+const signature = await keypair.signPersonalMessage(message);
+const isValid = await keypair.getPublicKey().verifyPersonalMessage(message, signature);
+```
+
+### BCS - Binary Canonical Serialization
+
+```typescript
+import { bcs } from '@onelabs/bcs';
+
+// Primitive types
+bcs.bool()           // boolean
+bcs.u8(), bcs.u16(), bcs.u32()  // numbers
+bcs.u64(), bcs.u128(), bcs.u256()  // bigint as string
+bcs.string()         // UTF-8 string
+
+// Compound types
+bcs.vector(bcs.u8())           // Variable length array
+bcs.fixedArray(32, bcs.u8())   // Fixed length array
+bcs.option(bcs.string())       // Optional value
+bcs.struct('Name', { field: bcs.u64() })  // Struct
+bcs.enum('Name', { Variant1: null, Variant2: bcs.u64() })  // Enum
+
+// Serialize/deserialize
+const bytes = bcs.u64().serialize(1000n);
+const value = bcs.u64().parse(bytes);
+```
+
+### dApp Kit - React Integration
+
+```bash
+npm i @onelabs/dapp-kit @onelabs/sui @tanstack/react-query
+```
+
+```typescript
+import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@onelabs/dapp-kit';
+import { getFullnodeUrl } from '@onelabs/sui/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '@onelabs/dapp-kit/dist/index.css';
+
+const { networkConfig } = createNetworkConfig({
+  localnet: { url: getFullnodeUrl('localnet') },
+  mainnet: { url: getFullnodeUrl('mainnet') },
+});
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SuiClientProvider networks={networkConfig} defaultNetwork="localnet">
+        <WalletProvider>
+          <YourApp />
+        </WalletProvider>
+      </SuiClientProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+Query hooks:
+```typescript
+import { useSuiClientQuery } from '@onelabs/dapp-kit';
+
+function MyComponent() {
+  const { data, isPending, error } = useSuiClientQuery('getOwnedObjects', {
+    owner: '0x123',
+  });
+  return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+```
+
+WalletProvider props:
+- `preferredWallets` - Wallets sorted to top of list
+- `walletFilter` - Filter function for allowed wallets
+- `autoConnect` - Auto-reconnect to last wallet
+- `enableUnsafeBurner` - Enable dev-only burner wallet
+- `theme` - UI theme (light/dark)
+
+### Utilities (@onelabs/sui/utils)
+
+Constants:
+- `MIST_PER_SUI` - 1,000,000,000 (conversion rate)
+- `SUI_DECIMALS` - 9
+- `SUI_ADDRESS_LENGTH` - 32 bytes
+- `SUI_FRAMEWORK_ADDRESS`, `SUI_SYSTEM_ADDRESS`, `MOVE_STDLIB_ADDRESS`
+- `SUI_CLOCK_OBJECT_ID`, `SUI_SYSTEM_STATE_OBJECT_ID`
+
+Formatters: `formatAddress()`, `formatDigest()`, `normalizeStructTag()`, `normalizeSuiAddress()`
+
+Validators: `isValidSuiAddress()`, `isValidSuiObjectId()`, `isValidTransactionDigest()`
+
+Encoding: `fromHex()`, `toHex()`, `fromBase64()`, `toBase64()`
+
+### Kiosk SDK
+
+```bash
+npm i @onelabs/kiosk
+```
+
+Interact with Sui Kiosk for NFT marketplaces. Create a `KioskClient` instance with `SuiClient`, network config, and custom rules/package IDs.
+
+### zkSend SDK
+
+```bash
+npm i @onelabs/zksend
+```
+
+Create zkSend Claim Links for any publicly transferrable asset. Integrates with Stashed wallet interface.
+
+### Development
+```bash
+pnpm install
+pnpm turbo build
+pnpm test        # unit tests
+pnpm test:e2e    # e2e tests (requires docker)
+```
+
+## Java SDK
+
+[onechain-sdk-java](https://github.com/one-chain-labs/onechain-sdk-java) is a reactive, type-safe Java library for OneChain smart contracts.
+
+### Maven
+```xml
+<dependency>
+    <groupId>cc.onelabs</groupId>
+    <artifactId>onechain-sdk-java</artifactId>
+</dependency>
+```
+
+### Features
+- Connect to OneChain networks
+- Address generation and faucet requests
+- Move calls, object transfers, package publishing
+- Get owned objects, coins, transaction blocks
+- Event subscription
+
+## Genesis
+
+[onechain-genesis](https://github.com/one-chain-labs/onechain-genesis) contains genesis state configurations for various OneChain networks (local, devnet, testnet, mainnet).
+
+## Core Components
+
+### Consensus
+- Narwhal: DAG-based mempool
+- Bullshark: Consensus protocol
+
+### Smart Contracts
+- Move Language: Asset-oriented programming
+- OneChain Framework: Standard library and primitives
+
+### Infrastructure
+- JSON-RPC API: Standard blockchain RPC interface
+- GraphQL API: Flexible query interface
+- Indexer: Transaction and event indexing
+- Bridge: Cross-chain asset transfers
+
+## Architecture
+
+OneChain uses a client-authority model:
+- CLI, REST, and RPC clients connect through ClientService
+- AuthorityAggregator manages connections to multiple authorities
+- Authorities maintain AuthorityState with Byzantine fault tolerance
+- Epoch-based reconfiguration based on delegated stake
+
+## Development
+
+### Prerequisites
+- Rust (see rust-toolchain.toml for version)
+- Move compiler
+- Node.js and pnpm for SDK development
+
+### Building
+```bash
+cargo build --release
+```
+
+### Running Tests
+```bash
+cargo test
+```
+
+## Gas Pool Service
+
+[OneChain Gas Pool](https://github.com/one-chain-labs/gas-pool) powers sponsored transactions at scale.
+
+### How It Works
+1. App prepares transaction without gas payment
+2. Internal server reserves gas coins from pool for specified budget
+3. Gas pool returns reserved coins
+4. User signs complete transaction
+5. Gas pool executes transaction via fullnode
+6. Used gas coins are freed for reuse
+
+### Architecture
+- Redis Storage: Persists gas coins and reservation data using Lua scripts
+- Gas Pool Server(s): JSON-RPC interface for reservations and execution
+- KMS Sidecar (optional): Secure transaction signing via AWS KMS or in-memory keys
+
+### Key APIs
+- `ReserveGasRequest`: Reserve gas coins for a budget and duration
+- `ExecuteTxRequest`: Execute transaction with reserved coins
+- Auto-release of expired reservations
+
+### Gas Pool Initializer
+- Splits sponsor's OCT coins into target-balance gas coins
+- Auto-detects and processes new funding
+- Parallel coin splitting for fast initialization
+- Distributed lock prevents concurrent initialization
+
+## Cryptography Library (fastcrypto)
+
+OneChain uses [fastcrypto](https://github.com/one-chain-labs/fastcrypto), a high-performance cryptographic library with three crates:
+
+### fastcrypto (Core)
+Signature schemes:
+- Ed25519: ZIP-215 compliant, backed by ed25519-consensus
+- Secp256k1: ECDSA with ~30% faster verification via C bindings, RFC6979 deterministic nonces
+- Secp256r1: ECDSA over NIST P-256, pure Rust implementation
+- BLS12-381: Assembly/C optimized via blst, supports signature aggregation
+- RSA: RFC 8017 compliant
+
+Hash functions:
+- SHA2-256, SHA2-512, SHA3-256, SHA3-512, KECCAK-256, BLAKE2-256
+- Multiset Hash (elliptic curve based)
+
+Encoding:
+- Base64 (constant-time via base64ct)
+- Hex
+
+### fastcrypto-zkp
+- Groth16 proof verification
+- BN254 and BLS12381 curve support
+- Backed by Arkworks and blst
+
+### fastcrypto-cli
+- CLI debugging tools for cryptographic operations
+
+WASM support available via feature flag.
+
+## JSON-RPC API Reference
+
+OneChain provides a JSON-RPC API for interacting with full nodes. Default local port is 9000.
+
+### Write API
+
+| Method | Description |
+|--------|-------------|
+| `sui_devInspectTransactionBlock` | Run transaction in dev-inspect mode with any arguments, returns effects and return values |
+| `sui_dryRunTransactionBlock` | Dry run transaction to get estimated gas fees without committing |
+| `sui_executeTransactionBlock` | Execute transaction and wait for results (WaitForEffectsCert or WaitForLocalExecution) |
+
+### Read API
+
+| Method | Description |
+|--------|-------------|
+| `sui_getChainIdentifier` | Return the chain's identifier |
+| `sui_getCheckpoint` | Return checkpoint information for a checkpoint ID |
+| `sui_getCheckpoints` | Return paginated list of checkpoints |
+| `sui_getEvents` | Return transaction events |
+| `sui_getLatestCheckpointSequenceNumber` | Return latest checkpoint sequence number |
+| `sui_getLoadedChildObjects` | Get loaded child objects for a transaction |
+| `sui_getObject` | Return object information for a specified object ID |
+| `sui_getProtocolConfig` | Return protocol config for a version number |
+| `sui_getTotalTransactionBlocks` | Return total number of transactions |
+| `sui_getTransactionBlock` | Return transaction response for a digest |
+| `sui_multiGetObjects` | Return object data for a list of object IDs |
+| `sui_multiGetTransactionBlocks` | Return ordered list of transaction responses |
+| `sui_tryGetPastObject` | Return object information for a specified version |
+| `sui_tryMultiGetPastObjects` | Return multiple past object versions |
+
+### Move Utils
+
+| Method | Description |
+|--------|-------------|
+| `sui_getMoveFunctionArgTypes` | Return argument types of a Move function |
+| `sui_getNormalizedMoveFunction` | Return structured representation of Move function |
+| `sui_getNormalizedMoveModule` | Return structured representation of Move module |
+| `sui_getNormalizedMoveModulesByPackage` | Return all modules in a package |
+| `sui_getNormalizedMoveStruct` | Return structured representation of Move struct |
+
+### Coin Query API
+
+| Method | Description |
+|--------|-------------|
+| `suix_getAllBalances` | Return total coin balance for all coin types owned by address |
+| `suix_getAllCoins` | Return all Coin objects owned by an address |
+| `suix_getBalance` | Return total coin balance for one coin type |
+| `suix_getCoinMetadata` | Return metadata (symbol, decimals) for a coin |
+| `suix_getCoins` | Return all Coin<coin_type> objects owned by address |
+| `suix_getTotalSupply` | Return total supply for a coin |
+
+### Governance Read API
+
+| Method | Description |
+|--------|-------------|
+| `suix_getCommitteeInfo` | Return committee information for an epoch |
+| `suix_getLatestSuiSystemState` | Return latest system state object |
+| `suix_getReferenceGasPrice` | Return reference gas price for the network |
+| `suix_getStakes` | Return all DelegatedStake for an address |
+| `suix_getStakesByIds` | Return DelegatedStake by IDs |
+| `suix_getValidatorsApy` | Return validator APY |
+
+### Extended API
+
+| Method | Description |
+|--------|-------------|
+| `suix_getDynamicFieldObject` | Return dynamic field object information |
+| `suix_getDynamicFields` | Return list of dynamic field objects owned by an object |
+| `suix_getOwnedObjects` | Return list of objects owned by an address |
+| `suix_queryEvents` | Return list of events for query criteria |
+| `suix_queryTransactionBlocks` | Return list of transactions for query criteria |
+| `suix_resolveNameServiceAddress` | Return resolved address given resolver and name |
+| `suix_resolveNameServiceNames` | Return resolved names given address |
+
+### WebSocket/PubSub API
+
+| Method | Description |
+|--------|-------------|
+| `suix_subscribeEvent` | Subscribe to a stream of events |
+| `suix_subscribeTransaction` | Subscribe to a stream of transaction effects |
+
+### Transaction Builder API (unsafe_*)
+
+| Method | Description |
+|--------|-------------|
+| `unsafe_batchTransaction` | Create unsigned batched transaction |
+| `unsafe_mergeCoins` | Create unsigned transaction to merge coins |
+| `unsafe_moveCall` | Create unsigned Move call transaction |
+| `unsafe_pay` | Send Coin<T> to addresses with amounts |
+| `unsafe_payAllSui` | Send all SUI to one recipient |
+| `unsafe_paySui` | Send SUI to addresses with amounts |
+| `unsafe_publish` | Create unsigned transaction to publish Move package |
+| `unsafe_requestAddStake` | Add stake to validator's staking pool |
+| `unsafe_requestWithdrawStake` | Withdraw stake from staking pool |
+| `unsafe_splitCoin` | Split coin into multiple coins |
+| `unsafe_splitCoinEqual` | Split coin into equal-size coins |
+| `unsafe_transferObject` | Transfer object to another address |
+| `unsafe_transferSui` | Send SUI coin to an address |
+
+### SuiJSON Type Mapping
+
+| JSON Type | Move Type | Notes |
+|-----------|-----------|-------|
+| Number | u8, u16, u32 | Must be unsigned, within range |
+| String | u64, u128, u256, Address, ObjectID | Large integers encoded as strings |
+| Boolean | Bool | No restrictions |
+| Array | Vector | Must be homogeneous |
+| String (hex) | Address, ObjectID | 32-byte hex prefixed with 0x |
+
+### Example: Execute Transaction
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "sui_executeTransactionBlock",
+  "params": [
+    "<base64_tx_bytes>",
+    ["<base64_signature>"],
+    {
+      "showInput": true,
+      "showEffects": true,
+      "showEvents": true,
+      "showObjectChanges": true,
+      "showBalanceChanges": true
+    },
+    "WaitForLocalExecution"
+  ]
+}
+```
+
+### Example: Get Object
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "sui_getObject",
+  "params": [
+    "0x53e4567ccafa5f36ce84c80aa8bc9be64e0d5ae796884274aef3005ae6733809",
+    {
+      "showType": true,
+      "showOwner": true,
+      "showContent": true,
+      "showStorageRebate": true
+    }
+  ]
+}
+```
+
+### Example: Get Owned Objects
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "suix_getOwnedObjects",
+  "params": [
+    "0xa69bb635dcee0f33643b4729ae81730d55e5e26860fac6839ce2d7ed7e6f29d2",
+    {
+      "filter": {
+        "StructType": "0x2::coin::Coin<0x2::sui::SUI>"
+      },
+      "options": {
+        "showType": true,
+        "showOwner": true
+      }
+    },
+    null,
+    50
+  ]
+}
+```
+
+## Community
+
+- [Telegram](https://t.me/hello_onechain): Community chat
+- [GitHub](https://github.com/one-chain-labs/onechain): Source code
+- [ts-sdks](https://github.com/one-chain-labs/ts-sdks): TypeScript SDKs
+- [onechain-sdk-java](https://github.com/one-chain-labs/onechain-sdk-java): Java SDK
+- [onechain-genesis](https://github.com/one-chain-labs/onechain-genesis): Network genesis states
+- [fastcrypto](https://github.com/one-chain-labs/fastcrypto): Cryptography library
+- [gas-pool](https://github.com/one-chain-labs/gas-pool): Sponsored transactions service
+
+## Legal
+
+- [Terms of Service](https://termsofservice.onelabs.cc/): Usage terms, eligibility requirements, restricted territories
+- [Privacy Policy](https://privacypolicy.onelabs.cc/): Data collection, usage, and user rights
+
+Key points:
+- Users must be 18+ and comply with applicable laws
+- Restricted territories: Cuba, Iran, North Korea, Syria, Belarus, Russia, Crimea/Luhansk/Donetsk/Zaporizhzhia/Kherson regions
+- Beta/Testnet tokens have no monetary value and are non-transferable
+- Disputes resolved via British Virgin Islands arbitration
+- Contact: [email protected]
+
+## Optional
+
+- [Whitepaper](https://docs.onelabs.cc/whitepaper): Technical whitepaper
+- [Tokenomics](https://docs.onelabs.cc/tokenomics): OCT token economics

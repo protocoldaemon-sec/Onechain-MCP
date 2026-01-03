@@ -9,8 +9,11 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:railway": "tsc && cp dist/index-railway.js dist/index.js",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "start:railway": "node dist/index-railway.js",
+    "dev": "tsx src/index.ts",
+    "dev:railway": "tsx src/index-railway.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

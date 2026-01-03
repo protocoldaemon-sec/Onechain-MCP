@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd onechain-mcp && npm ci"]
+
+[phases.build]
+cmds = ["cd onechain-mcp && npm run build"]
+
+[start]
+cmd = "cd onechain-mcp && node dist/index-railway.js"
